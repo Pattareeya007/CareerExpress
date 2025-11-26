@@ -1,0 +1,1385 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Career Express: Neon Edition</title>
+    <style>
+        /* --- RESET & BASICS --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+        body {
+            background-color: #050510;
+            color: #fff;
+            font-family: 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            touch-action: none;
+        }
+
+        /* --- VARIABLES --- */
+        :root {
+            --c-cyan: #00eaff;
+            --c-magenta: #ff4de1;
+            --c-purple: #8c52ff;
+            --c-green: #00ff90;
+            --c-gold: #ffb300;
+            --c-red: #ff3333;
+            --bg-dark: rgba(5, 5, 16, 0.9);
+        }
+
+        /* --- LAYOUT --- */
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background: #000;
+            box-shadow: 0 0 50px rgba(0, 234, 255, 0.1);
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- UI LAYER --- */
+        .ui-layer {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            padding: 5px; /* Reduced padding */
+            z-index: 10;
+        }
+
+        /* --- COMPACT NEON PANEL (Top) --- */
+        .neon-panel {
+            background: rgba(0, 10, 20, 0.45);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(0, 234, 255, 0.1); /* Thinner border */
+            box-shadow: 0 0 5px rgba(0, 234, 255, 0.05), inset 0 0 5px rgba(0, 234, 255, 0.05); /* Reduced glow */
+            border-radius: 5px;
+            padding: 3px 5px; /* Further reduced padding */
+            margin-bottom: 0;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            /* Target Height approx 10-13% */
+            max-height: 14vh; 
+        }
+
+        /* Decoration line for panel */
+        .neon-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--c-cyan), transparent);
+            opacity: 0.5;
+        }
+
+        .neon-text-gold { color: var(--c-gold); text-shadow: 0 0 3px var(--c-gold); }
+        .neon-text-red { color: var(--c-red); text-shadow: 0 0 3px var(--c-red); }
+        .neon-text-green { color: var(--c-green); text-shadow: 0 0 3px var(--c-green); }
+        .neon-text-cyan { color: var(--c-cyan); text-shadow: 0 0 3px var(--c-cyan); }
+
+        /* --- HUD LAYOUT --- */
+        
+        /* Top Row: Career Name Left, Difficulty Center, Stats Right */
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-bottom: 1px;
+            line-height: 1;
+        }
+
+        .career-info {
+            display: flex;
+            flex-direction: column;
+            max-width: 60%;
+        }
+
+        .diff-label {
+            font-size: 7px; /* Further reduced */
+            color: #aaa;
+            margin-bottom: 1px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .career-title {
+            font-size: 10px; /* Scaled down 15% from 11px */
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: var(--c-cyan);
+            text-shadow: 0 0 3px var(--c-cyan);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .hud-stats-cluster {
+            display: flex;
+            align-items: center;
+            gap: 4px; /* Reduced gap */
+            font-size: 8px; /* Scaled down */
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        /* Large Horizontal Time Bar */
+        .time-bar-container {
+            width: 100%;
+            height: 6px; /* Slightly slimmer */
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 1px 0 2px 0; /* Spacing */
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+        }
+        
+        .time-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--c-cyan), var(--c-purple));
+            width: 100%;
+            box-shadow: 0 0 8px var(--c-cyan);
+            transition: width 0.1s linear, background 0.3s;
+            position: relative;
+        }
+        
+        /* Optional: Stripes on time bar for texture */
+        .time-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 5px,
+                rgba(0,0,0,0.2) 5px,
+                rgba(0,0,0,0.2) 10px
+            );
+        }
+
+        /* Compact Skill List */
+        #skill-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px; 
+            justify-content: flex-start;
+            /* Relax height slightly to allow wrapping with larger fonts */
+            max-height: 50px; 
+            overflow: hidden;
+        }
+
+        .skill-tag {
+            font-size: 12px; /* Increased font size */
+            padding: 1px 3px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.03);
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: 0.3s;
+            white-space: nowrap;
+            line-height: 1.2;
+        }
+        
+        .skill-tag.complete {
+            background: rgba(0, 255, 144, 0.1);
+            border-color: var(--c-green);
+            box-shadow: 0 0 3px rgba(0, 255, 144, 0.2);
+            color: #fff;
+        }
+
+        .skill-name {
+            font-weight: 600;
+        }
+
+        /* --- FLASH OVERLAYS --- */
+        #flash-overlay {
+            position: absolute;
+            inset: 0;
+            background: transparent;
+            pointer-events: none;
+            z-index: 20;
+            transition: background 0.1s;
+        }
+        .flash-red { background: rgba(255, 50, 50, 0.2) !important; }
+        .flash-green { background: rgba(0, 255, 144, 0.2) !important; }
+
+        /* --- MENUS --- */
+        .full-screen-menu {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            pointer-events: auto;
+            transition: opacity 0.5s ease;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 5px;
+            color: var(--c-cyan);
+            text-shadow: 0 0 20px var(--c-cyan), 0 0 40px var(--c-purple);
+            line-height: 1.1;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        
+        h1 span {
+            font-size: 18px;
+            color: #fff;
+            text-shadow: none;
+            font-weight: 400;
+            letter-spacing: 2px;
+            display: block;
+            margin-top: 5px;
+        }
+
+        /* Difficulty Selector */
+        .diff-container {
+            margin: 15px 0;
+            width: 100%;
+            max-width: 300px;
+        }
+        .diff-title {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .diff-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn-diff {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #ccc;
+            padding: 8px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+            flex: 1;
+            font-family: inherit;
+        }
+        .btn-diff.active {
+            background: rgba(0, 234, 255, 0.15);
+            border-color: var(--c-cyan);
+            color: var(--c-cyan);
+            box-shadow: 0 0 10px rgba(0, 234, 255, 0.3);
+            font-weight: bold;
+        }
+
+        .btn {
+            background: transparent;
+            color: var(--c-magenta);
+            border: 2px solid var(--c-magenta);
+            padding: 10px 30px;
+            font-size: 16px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px var(--c-magenta), inset 0 0 15px var(--c-magenta);
+            transition: 0.2s;
+            margin-top: 15px;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            z-index: 2; /* above particles */
+        }
+        .btn:hover {
+            background: var(--c-magenta);
+            color: #000;
+            transform: scale(1.05);
+            box-shadow: 0 0 30px var(--c-magenta);
+        }
+        .btn:active { transform: scale(0.95); }
+
+        .hidden { display: none !important; }
+
+        .tutorial {
+            font-size: 11px;
+            color: #ccc;
+            margin-top: 20px;
+            line-height: 1.5;
+            max-width: 90%;
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Bottom score display */
+        .bottom-score {
+            margin-top: auto; 
+            text-align: center; 
+            font-size: 12px; 
+            opacity: 0.8; 
+            text-shadow: 0 0 5px #fff;
+            padding-bottom: 5px;
+        }
+
+        /* --- CAREER REPORT STYLES --- */
+        .report-container {
+            width: 100%;
+            max-width: 350px;
+            max-height: 40vh;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: left;
+            font-size: 12px;
+            color: #ddd;
+        }
+        
+        .report-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        .report-container::-webkit-scrollbar-thumb {
+            background: var(--c-cyan);
+            border-radius: 2px;
+        }
+
+        .report-section-title {
+            font-size: 14px;
+            color: var(--c-cyan);
+            margin-top: 10px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(0, 234, 255, 0.3);
+            padding-bottom: 3px;
+        }
+
+        .report-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid #666;
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .report-card.success {
+            border-left-color: var(--c-green);
+            background: rgba(0, 255, 144, 0.05);
+        }
+        .report-card.incomplete {
+            border-left-color: var(--c-gold);
+            background: rgba(255, 179, 0, 0.05);
+        }
+
+        .report-career-name {
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .report-status {
+            font-size: 10px;
+            margin-top: 4px;
+            font-style: italic;
+            opacity: 0.8;
+        }
+
+        .report-skill-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            margin-bottom: 2px;
+            color: #bbb;
+        }
+        .timeline-list {
+            font-size: 11px;
+            color: #ccc;
+            padding-left: 15px;
+        }
+        .timeline-item {
+            margin-bottom: 2px;
+        }
+
+        /* --- GAME COVER SCREEN --- */
+        #cover-screen {
+            background: #000;
+            perspective: 1000px; /* For 3D depth */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* The 3D Neon Frame Container */
+        #cover-frame {
+            position: relative;
+            width: 80%;
+            max-width: 400px;
+            padding: 40px 20px;
+            background: rgba(10, 15, 30, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid rgba(0, 234, 255, 0.3);
+            box-shadow: 
+                0 0 20px rgba(0, 234, 255, 0.1),
+                inset 0 0 30px rgba(0, 234, 255, 0.15);
+            transform-style: preserve-3d;
+            animation: frameFloat 6s ease-in-out infinite;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        /* Hover Effect for Interaction */
+        #cover-frame:hover {
+            border-color: rgba(255, 77, 225, 0.5);
+            box-shadow: 
+                0 0 30px rgba(255, 77, 225, 0.2),
+                inset 0 0 40px rgba(255, 77, 225, 0.2);
+            transform: scale(1.02);
+            transition: all 0.3s ease;
+        }
+
+        /* Animated Light Trace on Border */
+        #cover-frame::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 22px;
+            padding: 2px; 
+            background: linear-gradient(
+                45deg, 
+                transparent, 
+                var(--c-cyan), 
+                transparent, 
+                var(--c-magenta), 
+                transparent
+            );
+            -webkit-mask: 
+                linear-gradient(#fff 0 0) content-box, 
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: borderRotate 4s linear infinite;
+            pointer-events: none;
+        }
+
+        /* Corner Brackets (Tech Look) */
+        #cover-frame::after {
+            content: '';
+            position: absolute;
+            inset: -5px;
+            border: 2px solid transparent;
+            border-top-color: var(--c-cyan);
+            border-bottom-color: var(--c-magenta);
+            border-radius: 24px;
+            clip-path: polygon(
+                0% 0%, 20% 0%, 20% 100%, 0% 100%, /* Top Left Gap */
+                80% 0%, 100% 0%, 100% 100%, 80% 100% /* Bottom Right Gap */
+            );
+            /* Actually simple logic: just corners. Let's use simpler clip path */
+            clip-path: polygon(
+                0 20px, 20px 0, 100% 0, 100% 20px, 
+                100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 calc(100% - 20px)
+            );
+            /* Just distinct corners */
+            mask-image: radial-gradient(circle at center, transparent 70%, black 71%);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        @keyframes frameFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes borderRotate {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
+        /* Cover Background Effects (Behind Frame) */
+        .cover-bg-grid {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 200%; height: 200%;
+            background: 
+                linear-gradient(rgba(0, 234, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(140, 82, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: translate(-50%, -50%) perspective(500px) rotateX(60deg);
+            animation: gridMove 10s linear infinite;
+            z-index: 1;
+        }
+
+        .cover-particles {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2;
+            background-image: 
+                radial-gradient(circle, var(--c-cyan) 1px, transparent 1px),
+                radial-gradient(circle, var(--c-magenta) 1px, transparent 1px);
+            background-size: 100px 100px, 70px 70px;
+            background-position: 0 0, 30px 30px;
+            opacity: 0.3;
+            animation: particleDrift 20s linear infinite;
+        }
+
+        /* Runner Silhouette */
+        .runner-silhouette {
+            width: 80px; height: 120px;
+            background: linear-gradient(135deg, var(--c-cyan), var(--c-purple));
+            mask-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/></svg>');
+            -webkit-mask-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/></svg>');
+            mask-size: contain;
+            mask-repeat: no-repeat;
+            mask-position: center;
+            filter: drop-shadow(0 0 10px var(--c-cyan));
+            animation: runnerPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes gridMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 50px; }
+        }
+        @keyframes particleDrift {
+            0% { background-position: 0 0, 30px 30px; }
+            100% { background-position: 100px 100px, 130px 130px; }
+        }
+        @keyframes runnerPulse {
+            0%, 100% { filter: drop-shadow(0 0 10px var(--c-cyan)); transform: scale(1); }
+            50% { filter: drop-shadow(0 0 20px var(--c-magenta)); transform: scale(1.05); }
+        }
+
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="game-canvas"></canvas>
+    <div id="flash-overlay"></div>
+
+    <!-- HUD -->
+    <div id="game-ui" class="ui-layer hidden">
+        <div id="hud-top" class="neon-panel">
+            <!-- Row 1: Career Title & Stats Cluster -->
+            <div class="hud-header">
+                <div class="career-info">
+                    <div id="hud-diff-label" class="diff-label">ระดับ: ปานกลาง</div>
+                    <div class="career-title" id="career-name">Loading...</div>
+                </div>
+                <div class="hud-stats-cluster">
+                    <!-- Bomb Stat -->
+                    <div class="stat-item neon-text-red">
+                        <span>💣</span>
+                        <span id="bomb-text">0/3</span>
+                    </div>
+                    <!-- Time Stat (Text backup, mainly use bar) -->
+                    <div class="stat-item neon-text-cyan">
+                        <span>🕒</span>
+                        <span id="time-text">45s</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: Full Width Time Bar -->
+            <div class="time-bar-container">
+                <div id="time-bar" class="time-bar-fill"></div>
+            </div>
+
+            <!-- Row 3: Skill List -->
+            <div id="skill-list">
+                <!-- Skills injected by JS -->
+            </div>
+        </div>
+
+        <div class="bottom-score">
+            อาชีพที่สำเร็จ: <span id="score-display" class="neon-text-green" style="font-size: 16px;">0</span>
+        </div>
+    </div>
+
+    <!-- GAME COVER SCREEN -->
+    <div id="cover-screen" class="full-screen-menu">
+        <div class="cover-bg-grid"></div>
+        <div class="cover-particles"></div>
+        
+        <!-- NEW 3D FRAME -->
+        <div id="cover-frame">
+            <h1>CAREER EXPRESS<br><span>NEON EDITION</span></h1>
+            <p style="color: var(--c-cyan); font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Endless Skill Runner</p>
+            
+            <div class="runner-silhouette"></div>
+            
+            <button class="btn" style="width: 100%; max-width: 200px;" onclick="showDifficultySelect()">เริ่มเกม</button>
+        </div>
+    </div>
+
+    <!-- START SCREEN / DIFFICULTY SELECT -->
+    <div id="start-screen" class="full-screen-menu hidden">
+        <h2 style="color: var(--c-cyan); margin-bottom: 20px;">เลือกระดับความยาก</h2>
+        
+        <!-- Difficulty Selection -->
+        <div class="diff-container">
+            <div class="diff-buttons">
+                <button onclick="setDifficulty('easy')" id="btn-easy" class="btn-diff">ง่าย</button>
+                <button onclick="setDifficulty('medium')" id="btn-medium" class="btn-diff active">ปานกลาง</button>
+                <button onclick="setDifficulty('hard')" id="btn-hard" class="btn-diff">ยาก</button>
+            </div>
+        </div>
+
+        <button class="btn" onclick="startGame()">ลุยเลย!</button>
+        
+        <div class="tutorial">
+            <p>⬅️ ➡️ ใช้ลูกศร / แตะจอ เพื่อเคลื่อนที่</p>
+            <p><span style="color:var(--c-gold)">🕒 เก็บนาฬิกา</span> และ <span style="color:var(--c-cyan)">ทักษะที่จำเป็น</span></p>
+            <p><span style="color:var(--c-red)">⚠️ ระวังระเบิด (💣) และทักษะผิดสาย (-5วิ)</span></p>
+        </div>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div id="game-over-screen" class="full-screen-menu hidden">
+        <h1 style="color: var(--c-red); text-shadow: 0 0 30px var(--c-red);">GAME OVER</h1>
+        <p id="game-over-reason" style="font-size: 16px; margin-bottom: 5px; color:#fff;">เวลาหมด!</p>
+        
+        <p style="color:#aaa; font-size: 12px;">อาชีพที่สร้างสำเร็จทั้งหมด</p>
+        <div id="final-score" style="font-size: 40px; color: var(--c-green); text-shadow: 0 0 15px var(--c-green); margin: 0 0 10px 0;">0</div>
+
+        <!-- Career Summary Report -->
+        <div id="career-report" class="report-container">
+            <!-- Injected via JS -->
+        </div>
+
+        <button class="btn" onclick="resetToMenu()">เล่นใหม่</button>
+    </div>
+</div>
+
+<script>
+/**
+ * CAREER EXPRESS: NEON EDITION
+ * Single File HTML5 Canvas Game
+ */
+
+// --- CONFIG ---
+const CONSTANTS = {
+    LANE_COUNT: 3,
+    MAX_BOMB_HITS: 3,
+    INITIAL_TIME: 45,
+    TIME_BONUS: 5,
+    TIME_PENALTY: 5,
+    SPEED_BASE: 7,
+    SPEED_MAX: 14,
+    SPAWN_RATE: 45,
+    COLORS: {
+        CYAN: '#00eaff',
+        MAGENTA: '#ff4de1',
+        PURPLE: '#8c52ff',
+        GREEN: '#00ff90',
+        GOLD: '#ffb300',
+        RED: '#ff3333'
+    }
+};
+
+// --- DATA ---
+const SKILLS_DB = {
+    communication: { emoji: '🗣️', label: '🗣️ ทักษะการสื่อสาร', color: '#00eaff' },
+    problemSolving: { emoji: '🧠', label: '🧠 ทักษะการแก้ปัญหา', color: '#ff3333' },
+    digital: { emoji: '💻', label: '💻 ทักษะดิจิทัล', color: '#00ff90' },
+    teamwork: { emoji: '🤝', label: '🤝 การทำงานเป็นทีม', color: '#ff4de1' },
+    leadership: { emoji: '⭐', label: '⭐ ภาวะผู้นำ', color: '#8c52ff' },
+    creativity: { emoji: '🎨', label: '🎨 ความคิดสร้างสรรค์', color: '#ffb300' },
+    financial: { emoji: '💰', label: '💰 ความฉลาดทางการเงิน', color: '#ffffff' },
+    emotionalIntelligence: { emoji: '❤️‍🧠', label: '❤️‍🧠 ความฉลาดทางอารมณ์', color: '#ff88cc' }
+};
+
+const CAREERS = [
+    {
+        id: 'teacher',
+        name: 'ครู / Teacher',
+        req: { communication: 3, leadership: 2, emotionalIntelligence: 2 }
+    },
+    {
+        id: 'data_analyst',
+        name: 'นักวิเคราะห์ข้อมูล',
+        req: { digital: 3, problemSolving: 3, creativity: 1 }
+    },
+    {
+        id: 'dev',
+        name: 'นักพัฒนาซอฟต์แวร์',
+        req: { digital: 4, problemSolving: 2, teamwork: 2 }
+    },
+    {
+        id: 'manager',
+        name: 'ผู้จัดการโปรเจกต์',
+        req: { leadership: 3, communication: 3, financial: 2 }
+    },
+    {
+        id: 'creative',
+        name: 'ครีเอทีฟ',
+        req: { creativity: 4, communication: 2, digital: 2 }
+    }
+];
+
+// --- STATE ---
+let state = {
+    isPlaying: false,
+    gameOver: false,
+    score: 0,
+    time: 0,
+    bombHits: 0,
+    frame: 0,
+    speed: 0,
+    currentCareerIdx: 0,
+    collectedSkills: {},
+    entities: [],
+    particles: [],
+    shake: 0,
+    difficulty: 'medium', // easy, medium, hard
+    diffMultiplier: 1.0,
+    // History Tracking
+    completedCareersHistory: [],
+    careerTimeline: []
+};
+
+let player = {
+    lane: 1,
+    x: 0,
+    y: 0,
+    targetX: 0
+};
+
+// --- SETUP ---
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+let cw = 0, ch = 0, laneWidth = 0;
+
+function resize() {
+    const container = document.getElementById('game-container');
+    cw = canvas.width = container.clientWidth;
+    ch = canvas.height = container.clientHeight;
+    laneWidth = cw / CONSTANTS.LANE_COUNT;
+    player.y = ch - 120;
+    
+    player.targetX = (player.lane * laneWidth) + (laneWidth / 2);
+    if (!state.isPlaying) player.x = player.targetX;
+}
+window.addEventListener('resize', resize);
+
+// --- DIFFICULTY HANDLING ---
+function setDifficulty(level) {
+    state.difficulty = level;
+    
+    // Update UI buttons
+    document.querySelectorAll('.btn-diff').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`btn-${level}`).classList.add('active');
+
+    // Set Multiplier
+    if (level === 'easy') state.diffMultiplier = 0.7;
+    else if (level === 'medium') state.diffMultiplier = 1.0;
+    else if (level === 'hard') state.diffMultiplier = 1.4;
+}
+
+// --- INPUT ---
+function movePlayer(dir) {
+    if (!state.isPlaying || state.gameOver) return;
+    
+    player.lane += dir;
+    if (player.lane < 0) player.lane = 0;
+    if (player.lane >= CONSTANTS.LANE_COUNT) player.lane = CONSTANTS.LANE_COUNT - 1;
+
+    player.targetX = (player.lane * laneWidth) + (laneWidth / 2);
+}
+
+window.addEventListener('keydown', (e) => {
+    // Prevent key-repeat from triggering multiple moves when held down
+    if (e.repeat) return;
+    
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') movePlayer(-1);
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') movePlayer(1);
+});
+
+let startX = 0;
+canvas.addEventListener('touchstart', e => startX = e.touches[0].clientX, {passive: true});
+canvas.addEventListener('touchend', e => {
+    const endX = e.changedTouches[0].clientX;
+    const diff = endX - startX;
+    if (Math.abs(diff) > 30) movePlayer(diff > 0 ? 1 : -1);
+}, {passive: true});
+canvas.addEventListener('mousedown', e => startX = e.clientX);
+canvas.addEventListener('mouseup', e => {
+    const diff = e.clientX - startX;
+    if (Math.abs(diff) > 30) movePlayer(diff > 0 ? 1 : -1);
+});
+
+// --- NAVIGATION LOGIC ---
+function showDifficultySelect() {
+    document.getElementById('cover-screen').style.opacity = '0';
+    setTimeout(() => {
+        document.getElementById('cover-screen').classList.add('hidden');
+        document.getElementById('start-screen').classList.remove('hidden');
+    }, 500);
+}
+
+function resetToMenu() {
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('cover-screen').classList.remove('hidden');
+    document.getElementById('cover-screen').style.opacity = '1';
+    
+    // Reset state partially for menu
+    state.isPlaying = false;
+    state.gameOver = false;
+}
+
+function startGame() {
+    resize();
+    // Keep difficulty from selection
+    const currentDiff = state.difficulty;
+    const currentMult = state.diffMultiplier;
+    
+    // Random Start Career
+    const startIdx = Math.floor(Math.random() * CAREERS.length);
+
+    state = {
+        isPlaying: true,
+        gameOver: false,
+        score: 0,
+        time: CONSTANTS.INITIAL_TIME,
+        bombHits: 0,
+        frame: 0,
+        speed: CONSTANTS.SPEED_BASE,
+        currentCareerIdx: startIdx,
+        collectedSkills: {},
+        entities: [],
+        particles: [],
+        shake: 0,
+        difficulty: currentDiff,
+        diffMultiplier: currentMult,
+        completedCareersHistory: [],
+        careerTimeline: [CAREERS[startIdx].name] // Init timeline
+    };
+
+    player.lane = 1;
+    player.targetX = (player.lane * laneWidth) + (laneWidth / 2);
+    player.x = player.targetX;
+
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('game-ui').classList.remove('hidden');
+    document.getElementById('flash-overlay').className = '';
+
+    // Set HUD Difficulty Label
+    const diffMap = { 'easy': 'ง่าย', 'medium': 'ปานกลาง', 'hard': 'ยาก' };
+    document.getElementById('hud-diff-label').innerText = `ระดับ: ${diffMap[state.difficulty]}`;
+
+    setupCareerUI();
+    updateUI();
+    gameLoop();
+}
+
+function setupCareerUI() {
+    const career = CAREERS[state.currentCareerIdx];
+    document.getElementById('career-name').textContent = career.name;
+    
+    state.collectedSkills = {};
+    Object.keys(career.req).forEach(key => state.collectedSkills[key] = 0);
+    renderSkillList();
+}
+
+function renderSkillList() {
+    const list = document.getElementById('skill-list');
+    list.innerHTML = '';
+    const career = CAREERS[state.currentCareerIdx];
+    
+    Object.keys(career.req).forEach(key => {
+        const req = career.req[key];
+        const cur = state.collectedSkills[key] || 0;
+        const def = SKILLS_DB[key];
+        
+        const el = document.createElement('div');
+        el.className = `skill-tag ${cur >= req ? 'complete' : ''}`;
+        if(cur >= req) {
+            el.style.borderColor = def.color;
+        } else {
+            el.style.borderLeft = `3px solid ${def.color}`;
+        }
+        
+        // Compact display: Label + Count
+        el.innerHTML = `
+            <span class="skill-name" style="color:${def.color}">${def.label}</span>
+            <span>${cur}/${req}</span>
+        `;
+        list.appendChild(el);
+    });
+}
+
+function spawnEntity() {
+    const lane = Math.floor(Math.random() * CONSTANTS.LANE_COUNT);
+    const typeRoll = Math.random();
+    let type, data;
+
+    // 40% Skill, 20% Time, 40% Bomb
+    if (typeRoll < 0.4) {
+        type = 'SKILL';
+        const career = CAREERS[state.currentCareerIdx];
+        const reqKeys = Object.keys(career.req);
+        const allKeys = Object.keys(SKILLS_DB);
+        
+        let skillKey;
+        // 60% chance to spawn a needed skill
+        if (Math.random() < 0.6) {
+            const needed = reqKeys.filter(k => (state.collectedSkills[k] || 0) < career.req[k]);
+            skillKey = needed.length > 0 
+                ? needed[Math.floor(Math.random() * needed.length)]
+                : reqKeys[Math.floor(Math.random() * reqKeys.length)];
+        } else {
+            skillKey = allKeys[Math.floor(Math.random() * allKeys.length)];
+        }
+        data = skillKey;
+
+    } else if (typeRoll < 0.6) {
+        type = 'TIME';
+    } else {
+        type = 'BOMB';
+    }
+
+    state.entities.push({
+        id: Math.random(),
+        lane: lane,
+        y: -100,
+        type: type,
+        data: data,
+        collected: false
+    });
+}
+
+function spawnParticle(x, y, text, color) {
+    state.particles.push({
+        x: x, y: y,
+        text: text,
+        color: color,
+        life: 1.0,
+        vy: -2
+    });
+}
+
+function checkCareerCompletion() {
+    const career = CAREERS[state.currentCareerIdx];
+    const isComplete = Object.keys(career.req).every(k => 
+        (state.collectedSkills[k] || 0) >= career.req[k]
+    );
+
+    if (isComplete) {
+        // Track History
+        state.completedCareersHistory.push({
+            name: career.name,
+            req: career.req,
+            collected: {...state.collectedSkills} // snapshot
+        });
+
+        state.score++;
+        triggerFlash('green');
+        spawnParticle(cw/2, ch/2 - 50, "⭐ สร้างอาชีพสำเร็จ! +1", CONSTANTS.COLORS.GREEN);
+        
+        let nextIdx = state.currentCareerIdx;
+        while(nextIdx === state.currentCareerIdx) {
+            nextIdx = Math.floor(Math.random() * CAREERS.length);
+        }
+        state.currentCareerIdx = nextIdx;
+        state.careerTimeline.push(CAREERS[nextIdx].name);
+
+        // Speed increase happens via state.speed, but difficulty multiplier stays constant
+        state.speed = Math.min(state.speed + 0.5, CONSTANTS.SPEED_MAX);
+        
+        setTimeout(() => {
+            setupCareerUI();
+            updateUI();
+        }, 600);
+    }
+}
+
+function triggerFlash(color) {
+    const el = document.getElementById('flash-overlay');
+    el.className = color === 'red' ? 'flash-red' : 'flash-green';
+    setTimeout(() => el.className = '', 150);
+}
+
+function generateCareerReport() {
+    const container = document.getElementById('career-report');
+    let html = '';
+
+    // 1. Completed Careers
+    if (state.completedCareersHistory.length > 0) {
+        html += `<div class="report-section-title">อาชีพที่สำเร็จแล้ว (${state.completedCareersHistory.length})</div>`;
+        
+        state.completedCareersHistory.forEach(c => {
+            let skillsHtml = '';
+            Object.keys(c.req).forEach(k => {
+                const def = SKILLS_DB[k];
+                skillsHtml += `
+                    <div class="report-skill-row">
+                        <span>${def.emoji} ${def.label.replace(def.emoji, '').trim()}</span>
+                        <span style="color:var(--c-green)">${c.collected[k]}/${c.req[k]}</span>
+                    </div>
+                `;
+            });
+            
+            html += `
+                <div class="report-card success">
+                    <div class="report-career-name">🧑‍💼 ${c.name}</div>
+                    ${skillsHtml}
+                    <div class="report-status" style="color:var(--c-green)">เก็บครบถ้วน (สำเร็จ)</div>
+                </div>
+            `;
+        });
+    }
+
+    // 2. Last Attempted Career (Current active one)
+    const currentCareer = CAREERS[state.currentCareerIdx];
+    html += `<div class="report-section-title">อาชีพสุดท้ายที่กำลังเล่น</div>`;
+    
+    let currentSkillsHtml = '';
+    Object.keys(currentCareer.req).forEach(k => {
+        const def = SKILLS_DB[k];
+        const cur = state.collectedSkills[k] || 0;
+        const req = currentCareer.req[k];
+        const isDone = cur >= req;
+        currentSkillsHtml += `
+            <div class="report-skill-row">
+                <span>${def.emoji} ${def.label.replace(def.emoji, '').trim()}</span>
+                <span style="color:${isDone ? 'var(--c-green)' : '#888'}">${cur}/${req}</span>
+            </div>
+        `;
+    });
+
+    html += `
+        <div class="report-card incomplete">
+            <div class="report-career-name">🚧 ${currentCareer.name}</div>
+            ${currentSkillsHtml}
+            <div class="report-status" style="color:var(--c-gold)">ยังไม่สำเร็จ (จบเกมก่อน)</div>
+        </div>
+    `;
+
+    // 3. Timeline
+    html += `<div class="report-section-title">ลำดับอาชีพที่เล่น</div>`;
+    html += `<ol class="timeline-list">`;
+    state.careerTimeline.forEach(name => {
+        html += `<li class="timeline-item">${name}</li>`;
+    });
+    html += `</ol>`;
+
+    container.innerHTML = html;
+}
+
+function gameOver(reason) {
+    state.isPlaying = false;
+    state.gameOver = true;
+    document.getElementById('game-over-reason').innerText = reason;
+    document.getElementById('final-score').innerText = state.score;
+    
+    generateCareerReport();
+
+    document.getElementById('game-ui').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.remove('hidden');
+}
+
+function update() {
+    state.frame++;
+
+    // Time
+    if (state.frame % 60 === 0) {
+        state.time--;
+        if (state.time <= 0) gameOver("หมดเวลา!");
+    }
+
+    // Spawn
+    if (state.frame % CONSTANTS.SPAWN_RATE === 0) {
+        spawnEntity();
+    }
+
+    // Player Move - SNAPPY PHYSICS
+    // Increased Lerp factor from 0.15 to 0.4 for instantaneous feel
+    player.x += (player.targetX - player.x) * 0.4;
+
+    // Entities
+    const hitY = player.y - 40;
+    const hitRange = 40;
+
+    // Effective Speed adjusted by Difficulty
+    const currentFallingSpeed = state.speed * state.diffMultiplier;
+
+    for (let i = state.entities.length - 1; i >= 0; i--) {
+        let e = state.entities[i];
+        
+        // Apply Speed Multiplier Here
+        e.y += currentFallingSpeed;
+
+        if (!e.collected && e.y > hitY - hitRange && e.y < hitY + hitRange) {
+            const laneCenterX = (e.lane * laneWidth) + (laneWidth/2);
+            if (Math.abs(player.x - laneCenterX) < laneWidth/2.5) {
+                e.collected = true;
+                handleCollision(e);
+            }
+        }
+
+        if (e.y > ch + 100 || e.collected) {
+            state.entities.splice(i, 1);
+        }
+    }
+
+    // Particles
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+        let p = state.particles[i];
+        p.y += p.vy;
+        p.life -= 0.02;
+        if (p.life <= 0) state.particles.splice(i, 1);
+    }
+
+    // Shake
+    if (state.shake > 0) {
+        state.shake *= 0.9;
+        if (state.shake < 0.5) state.shake = 0;
+    }
+
+    updateUI();
+}
+
+function handleCollision(e) {
+    const px = (e.lane * laneWidth) + (laneWidth/2);
+    const py = e.y;
+
+    if (e.type === 'BOMB') {
+        state.bombHits++;
+        state.shake = 25;
+        triggerFlash('red');
+        spawnParticle(px, py, "💥 โดนลูกระเบิด!", CONSTANTS.COLORS.RED);
+        if (state.bombHits >= CONSTANTS.MAX_BOMB_HITS) gameOver("โดนระเบิดครบ 3 ครั้ง!");
+    } 
+    else if (e.type === 'TIME') {
+        state.time += CONSTANTS.TIME_BONUS;
+        spawnParticle(px, py, "🕒 +เวลา", CONSTANTS.COLORS.GOLD);
+    } 
+    else if (e.type === 'SKILL') {
+        const career = CAREERS[state.currentCareerIdx];
+        const isRequired = career.req.hasOwnProperty(e.data);
+        const def = SKILLS_DB[e.data];
+
+        if (isRequired) {
+            state.collectedSkills[e.data] = (state.collectedSkills[e.data] || 0) + 1;
+            // Float: Full Label
+            spawnParticle(px, py, `+1 ${def.label}`, def.color);
+            checkCareerCompletion();
+            renderSkillList();
+        } else {
+            state.time = Math.max(0, state.time - CONSTANTS.TIME_PENALTY);
+            triggerFlash('red');
+            state.shake = 10;
+            // Float: Error Message
+            spawnParticle(px, py, `❌ ทักษะผิดสาย -${CONSTANTS.TIME_PENALTY}วิ`, CONSTANTS.COLORS.RED);
+        }
+    }
+}
+
+function updateUI() {
+    document.getElementById('time-text').innerText = state.time + 's';
+    document.getElementById('score-display').innerText = state.score;
+    document.getElementById('bomb-text').innerText = `${state.bombHits}/${CONSTANTS.MAX_BOMB_HITS}`;
+
+    const pct = Math.min(100, (state.time / 60) * 100);
+    const bar = document.getElementById('time-bar');
+    bar.style.width = pct + '%';
+    bar.style.background = state.time < 10 ? CONSTANTS.COLORS.RED : 'linear-gradient(90deg, var(--c-cyan), var(--c-purple))';
+}
+
+// --- DRAWING ---
+function draw() {
+    ctx.fillStyle = '#050510';
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Shake
+    ctx.save();
+    if (state.shake > 0) {
+        ctx.translate((Math.random()-0.5)*state.shake, (Math.random()-0.5)*state.shake);
+    }
+
+    // Grid / Lanes
+    ctx.strokeStyle = 'rgba(0, 234, 255, 0.15)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 1; i < CONSTANTS.LANE_COUNT; i++) {
+        const x = i * laneWidth;
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, ch);
+    }
+    ctx.stroke();
+
+    const gridOffset = (state.frame * (state.speed * state.diffMultiplier)) % 150;
+    ctx.strokeStyle = 'rgba(0, 234, 255, 0.05)';
+    for (let y = gridOffset; y < ch; y += 150) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(cw, y);
+        ctx.stroke();
+    }
+
+    // Entities
+    state.entities.forEach(e => {
+        const x = (e.lane * laneWidth) + (laneWidth/2);
+        const y = e.y;
+        ctx.save();
+        ctx.translate(x, y);
+
+        if (e.type === 'BOMB') {
+            // Bomb
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = CONSTANTS.COLORS.RED;
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(0, 0, 28, 0, Math.PI*2);
+            ctx.fill();
+            
+            ctx.font = '32px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('💣', 0, 2);
+
+        } else if (e.type === 'TIME') {
+            // Clock
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = CONSTANTS.COLORS.GOLD;
+            ctx.strokeStyle = CONSTANTS.COLORS.GOLD;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, Math.PI*2);
+            ctx.stroke();
+            
+            ctx.font = '26px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🕒', 0, 2);
+
+        } else if (e.type === 'SKILL') {
+            // Skill with Emoji ONLY on Track
+            const def = SKILLS_DB[e.data];
+            const color = def ? def.color : '#fff';
+            const emoji = def ? def.emoji : '❓';
+            
+            // Outer Glow
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = color;
+            ctx.fillStyle = color;
+            ctx.globalAlpha = 0.15;
+            ctx.beginPath();
+            ctx.arc(0, 0, 35, 0, Math.PI*2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+
+            // Ring
+            ctx.beginPath();
+            ctx.fillStyle = '#000';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.arc(0, 0, 28, 0, Math.PI*2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Emoji ONLY
+            ctx.shadowBlur = 0;
+            ctx.font = '36px Arial'; // Larger emoji
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(emoji, 0, 4);
+        }
+        ctx.restore();
+    });
+
+    // Player
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = CONSTANTS.COLORS.CYAN;
+    
+    // Ship Shape
+    ctx.fillStyle = '#000';
+    ctx.strokeStyle = CONSTANTS.COLORS.CYAN;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, -25);
+    ctx.lineTo(18, 18);
+    ctx.lineTo(0, 10);
+    ctx.lineTo(-18, 18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Flame
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = CONSTANTS.COLORS.MAGENTA;
+    ctx.fillStyle = CONSTANTS.COLORS.MAGENTA;
+    ctx.beginPath();
+    ctx.moveTo(-6, 15);
+    ctx.lineTo(0, 15 + (Math.random() * 20 + 5));
+    ctx.lineTo(6, 15);
+    ctx.fill();
+    ctx.restore();
+
+    // Particles
+    state.particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = p.color;
+        ctx.font = "bold 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(p.text, p.x, p.y);
+        ctx.restore();
+    });
+
+    ctx.restore();
+}
+
+function gameLoop() {
+    if (state.isPlaying) {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+}
+
+// Initial Resize
+resize();
+
+</script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
